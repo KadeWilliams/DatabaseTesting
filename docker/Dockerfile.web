@@ -11,7 +11,13 @@ RUN dotnet restore MyApplication.Web/MyApplication.Web.csproj
 COPY src/MyApplication.Core/ MyApplication.Core/
 COPY src/MyApplication.Infrastructure/ MyApplication.Infrastructure/
 COPY src/MyApplication.Web/ MyApplication.Web/
-RUN dotnet publish MyApplication.Web/MyApplication.Web.csproj -c Release -o /app --no-restore
+# Deliberately not --no-restore: on some Docker Desktop backends, BuildKit's
+# layer snapshotting can drop files from the NuGet package cache between the
+# restore layer above and this one (surfaces as NETSDK1064 "package was not
+# found" for an already-restored package). Letting publish re-verify/restore
+# costs a few seconds when the cache is intact, but doesn't hard-fail when
+# it isn't.
+RUN dotnet publish MyApplication.Web/MyApplication.Web.csproj -c Release -o /app
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
