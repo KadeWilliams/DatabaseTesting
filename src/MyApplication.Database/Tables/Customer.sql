@@ -11,8 +11,13 @@ CREATE TABLE [dbo].[Customer]
     [LastName]     NVARCHAR(100)   NOT NULL,
     [Email]        NVARCHAR(256)   NOT NULL,
     [CreatedAtUtc] DATETIME2(0)    NOT NULL CONSTRAINT [DF_Customer_CreatedAtUtc] DEFAULT (SYSUTCDATETIME()),
-    [ValidFrom]    DATETIME2       GENERATED ALWAYS AS ROW START HIDDEN NOT NULL,
-    [ValidTo]      DATETIME2       GENERATED ALWAYS AS ROW END HIDDEN NOT NULL,
+    -- Explicit defaults on the period columns (Microsoft's documented
+    -- pattern for temporal-enabling an existing table) are what let
+    -- sqlpackage backfill these NOT NULL columns on a table that already
+    -- has rows, instead of tripping its data-loss guard and refusing to
+    -- deploy — see docs/production-playbook.md for the diff that caught this.
+    [ValidFrom]    DATETIME2       GENERATED ALWAYS AS ROW START HIDDEN NOT NULL CONSTRAINT [DF_Customer_ValidFrom] DEFAULT (SYSUTCDATETIME()),
+    [ValidTo]      DATETIME2       GENERATED ALWAYS AS ROW END HIDDEN NOT NULL CONSTRAINT [DF_Customer_ValidTo] DEFAULT (CONVERT(DATETIME2, '9999-12-31 23:59:59.9999999')),
     CONSTRAINT [PK_Customer] PRIMARY KEY CLUSTERED ([CustomerId]),
     PERIOD FOR SYSTEM_TIME ([ValidFrom], [ValidTo])
 )
