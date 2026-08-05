@@ -1,0 +1,28 @@
+@page
+@model MyApplication.Web.Pages.IndexModel
+@{
+    ViewData["Title"] = "Home";
+}
+
+<h1>MyApplication Demo</h1>
+<p class="muted">
+    ASP.NET Core Razor Pages &rarr; Dapper &rarr; stored procedures &rarr; SQL Server, with the schema
+    owned entirely by the <code>MyApplication.Database</code> SQL project and deployed as a
+    <code>.dacpac</code> when the database container starts.
+</p>
+
+<div class="page-header">
+    <div>
+        <h2>@Model.CustomerCount</h2>
+        <p class="muted">Customers</p>
+    </div>
+    <div>
+        <h2>@Model.OrderCount</h2>
+        <p class="muted">Orders</p>
+    </div>
+</div>
+
+<p>
+    <a class="btn" href="/Customers">Browse Customers</a>
+    <a class="btn btn-secondary" href="/Orders">Browse Orders</a>
+</p>

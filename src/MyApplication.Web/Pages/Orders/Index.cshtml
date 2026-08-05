@@ -1,0 +1,39 @@
+@page
+@model MyApplication.Web.Pages.Orders.IndexModel
+@{
+    ViewData["Title"] = "Orders";
+}
+
+<div class="page-header">
+    <h1>Orders</h1>
+    <a class="btn" href="/Orders/Create">+ New Order</a>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Order #</th>
+            <th>Customer</th>
+            <th>Date</th>
+            <th>Status</th>
+            <th>Total</th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var order in Model.Orders)
+    {
+        <tr>
+            <td><a href="/Orders/Details/@order.OrderId">#@order.OrderId</a></td>
+            <td><a href="/Customers/Details/@order.CustomerId">@order.FirstName @order.LastName</a></td>
+            <td>@order.OrderDate.ToString("yyyy-MM-dd")</td>
+            <td><span class="badge badge-@order.StatusName">@order.StatusName</span></td>
+            <td>@order.OrderTotal.ToString("C")</td>
+        </tr>
+    }
+    </tbody>
+</table>
+
+@if (!Model.Orders.Any())
+{
+    <p class="muted">No orders found.</p>
+}

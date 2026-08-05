@@ -1,0 +1,107 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_OWNER: ${{ github.repository_owner }}
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      # Building the solution builds every project in one pass, including
+      # MyApplication.Database.sqlproj — the same dotnet build command that
+      # produces the API's DLLs also produces the schema's .dacpac. There is
+      # no separate "database build" step to fall out of sync with the app.
+      - name: Build solution (app binaries + schema .dacpac)
+        run: dotnet build MyApplication.sln -c Release
+
+      - name: Compute image tag
+        id: vars
+        run: echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      # Database image first. If the schema doesn't build or the dacpac is
+      # invalid, this fails here and the web image is never even attempted.
+      - name: Build database image
+        run: |
+          docker build \
+            -f docker/Dockerfile.database \
+            --build-arg SCHEMA_VERSION=${{ steps.vars.outputs.sha }} \
+            -t myapp-db:${{ steps.vars.outputs.sha }} \
+            .
+
+      - name: Build web image
+        run: |
+          docker build \
+            -f docker/Dockerfile.web \
+            --build-arg APP_VERSION=${{ steps.vars.outputs.sha }} \
+            -t myapp-web:${{ steps.vars.outputs.sha }} \
+            .
+
+      # Smoke test: bring the pair up together and confirm the schema
+      # deploys and the app can actually reach it, the same way a developer
+      # would with `docker compose up`.
+      - name: Smoke test the stack
+        env:
+          SCHEMA_VERSION: ${{ steps.vars.outputs.sha }}
+          APP_VERSION: ${{ steps.vars.outputs.sha }}
+        run: |
+          docker compose up -d
+          echo "Waiting for the web app to become healthy..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8080/healthz > /dev/null; then
+              echo "Healthy."
+              break
+            fi
+            if [ "$i" -eq 30 ]; then
+              echo "App did not become healthy in time." >&2
+              docker compose logs
+              exit 1
+            fi
+            sleep 5
+          done
+          curl -sf http://localhost:8080/Customers > /dev/null
+          curl -sf http://localhost:8080/Orders > /dev/null
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
+
+      # Publishing is commented out since it needs a registry to push to —
+      # flip this on by setting `packages: write` permission on the job and
+      # uncommenting once you've decided where images should live.
+      # - name: Log in to GHCR
+      #   uses: docker/login-action@v3
+      #   with:
+      #     registry: ${{ env.REGISTRY }}
+      #     username: ${{ github.actor }}
+      #     password: ${{ secrets.GITHUB_TOKEN }}
+      #
+      # - name: Push database image
+      #   if: github.ref == 'refs/heads/main'
+      #   run: |
+      #     docker tag myapp-db:${{ steps.vars.outputs.sha }} ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/myapp-db:${{ steps.vars.outputs.sha }}
+      #     docker tag myapp-db:${{ steps.vars.outputs.sha }} ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/myapp-db:latest
+      #     docker push ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/myapp-db:${{ steps.vars.outputs.sha }}
+      #     docker push ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/myapp-db:latest
+      #
+      # - name: Push web image
+      #   if: github.ref == 'refs/heads/main'
+      #   run: |
+      #     docker tag myapp-web:${{ steps.vars.outputs.sha }} ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/myapp-web:${{ steps.vars.outputs.sha }}
+      #     docker tag myapp-web:${{ steps.vars.outputs.sha }} ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/myapp-web:latest
+      #     docker push ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/myapp-web:${{ steps.vars.outputs.sha }}
+      #     docker push ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/myapp-web:latest

@@ -1,3 +1,121 @@
-# Database Testing Project
+# Database Testing — Docker + SQL Database Project demo
 
-This is a project I'm wanting to use to be able to better understand how to use database projects and docker within my development environment to make things more agile/nimble as well as more secure from potential issues. 
+A small, real, end-to-end ASP.NET Core app built to show how a SQL Server
+**Database Project** (SSDT-style `.sqlproj`, schema as source code) and
+**Docker** reinforce each other: the schema is built the same way as the
+app, deployed the same way as the app, and versioned as an image the same
+way as the app.
+
+```
+Browser
+   │
+   ▼
+MyApplication.Web  (Razor Pages, port 8080)
+   │  Dapper, calls stored procedures only — never touches tables directly
+   ▼
+MyApplication.Infrastructure  (repositories)
+   │
+   ▼
+SQL Server 2022 (container)
+   ▲
+   │ schema deployed from a .dacpac at container startup
+   │
+MyApplication.Database  (.sqlproj — tables, indexes, views, stored procs,
+                          seed data — the single source of truth for schema)
+```
+
+## Quick start
+
+```bash
+docker compose up --build
+```
+
+Then open:
+
+- **http://localhost:8080** — the app (a few seed customers/orders are
+  already there)
+- **http://localhost:8080/Customers** — CRUD
+- **http://localhost:8080/Orders** — create an order, add line items,
+  change its status
+- `localhost:1433` — the database itself, if you want to connect with SSMS
+  / Azure Data Studio / `sqlcmd` (`sa` / `YourStrong@Passw0rd`)
+
+First run takes a minute or two — it's building three images (SQL project →
+dacpac, the database image, the web image) and then SQL Server has to boot
+before the schema deploy runs. `docker compose logs -f db` shows the deploy
+happening live if you want to watch it.
+
+`docker compose down -v` tears it down, including the data volume.
+
+## What to actually look at
+
+- **`src/MyApplication.Database/`** — the schema. Tables, indexes, a view,
+  and every stored procedure the app calls, all as plain `.sql` files you
+  can read, diff, and code-review like any other source code. Build it on
+  its own with `dotnet build src/MyApplication.Database` — no SQL Server
+  needed, no Visual Studio needed, it's a normal SDK-style project that
+  just happens to produce a `.dacpac` instead of a `.dll`.
+- **`docker/Dockerfile.database`** + **`docker/db-entrypoint.sh`** — how
+  that dacpac becomes a running database. `sqlpackage /Action:Publish` is
+  idempotent, so this same entrypoint both *creates* the schema on a fresh
+  volume and *upgrades* it on an existing one — that's the "migrations"
+  story, without a separate migrations framework.
+- **`src/MyApplication.Infrastructure/Repositories/`** — the app never
+  writes raw SQL against tables. It calls stored procedures through Dapper
+  (`dbo.usp_Customer_GetById`, etc.), so the database project's public
+  surface (procs + a view) is the actual contract between app and schema.
+- **[`docs/versioned-db-images.md`](docs/versioned-db-images.md)** — the
+  part that's easy to miss: because the schema is baked into an image at
+  build time, *the image is a version*. `scripts/build-db-image.sh` tags
+  one per commit; `scripts/compare-schema.sh` diffs two of them directly;
+  `docker-compose.historical.yml` runs a whole historical app+database pair
+  side by side with your current one. This doc walks through all of it with
+  real commands.
+
+## Project layout
+
+```
+MyApplication.sln
+src/
+  MyApplication.Core/            domain models, repository interfaces
+  MyApplication.Infrastructure/  Dapper repositories, calls stored procs
+  MyApplication.Web/             Razor Pages frontend
+  MyApplication.Database/        the SQL Database Project (.sqlproj)
+    Tables/  Indexes/  Views/  StoredProcedures/
+    Scripts/Post-Deployment/     idempotent seed data (statuses + demo rows)
+docker/
+  Dockerfile.database            builds the dacpac, bakes it into SQL Server
+  Dockerfile.web                 builds and runs the Razor Pages app
+  db-entrypoint.sh               starts SQL Server, deploys the dacpac
+scripts/
+  build-db-image.sh              tag a db image by git sha (+ optional version)
+  build-web-image.sh             same, for the app image
+  compare-schema.sh              diff a table's columns between two db image tags
+docker-compose.yml               the live stack
+docker-compose.historical.yml    pull up a specific tagged version, side by side
+.github/workflows/ci-cd.yml      build → smoke test → (optional) push, in order
+```
+
+## Running without Docker
+
+The app and database project are normal .NET projects — Docker is how this
+demo shows the deployment story, not a requirement to write code.
+
+```bash
+dotnet build MyApplication.sln
+```
+
+For local development against a real SQL Server without full compose, run
+just the `db` service (`docker compose up db`) and `dotnet run --project
+src/MyApplication.Web` — `appsettings.Development.json` already points at
+`localhost,1433`.
+
+## Notes on the demo data
+
+`Scripts/Post-Deployment/01_SeedStatus.sql` and `02_SeedSampleData.sql` run
+after every schema deploy and are idempotent (guarded with `MERGE` / `IF NOT
+EXISTS`), so restarting the stack never duplicates rows. The SA password
+here is a plaintext demo default (`YourStrong@Passw0rd`, in
+`docker-compose.yml` and `appsettings.json`) — fine for a local learning
+project, not how you'd handle it for anything real (Docker/Kubernetes
+secrets, a key vault, etc.).

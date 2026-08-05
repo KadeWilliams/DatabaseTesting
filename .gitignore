@@ -1,0 +1,15 @@
+## .NET
+bin/
+obj/
+*.user
+
+## SQL project build output
+*.dacpac
+
+## IDE
+.vs/
+.vscode/
+*.suo
+
+## OS
+.DS_Store

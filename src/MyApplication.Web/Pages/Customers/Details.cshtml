@@ -1,0 +1,46 @@
+@page "{id:int}"
+@model MyApplication.Web.Pages.Customers.DetailsModel
+@{
+    ViewData["Title"] = "Customer Details";
+}
+
+@if (Model.Customer is null)
+{
+    <p class="muted">Customer not found.</p>
+}
+else
+{
+    <div class="page-header">
+        <h1>@Model.Customer.FirstName @Model.Customer.LastName</h1>
+        <a class="btn" href="/Orders/Create?customerId=@Model.Customer.CustomerId">+ New Order</a>
+    </div>
+    <p class="muted">@Model.Customer.Email &middot; Customer since @Model.Customer.CreatedAtUtc.ToString("yyyy-MM-dd")</p>
+
+    <h2>Orders</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Order #</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var order in Model.Orders)
+        {
+            <tr>
+                <td><a href="/Orders/Details/@order.OrderId">#@order.OrderId</a></td>
+                <td>@order.OrderDate.ToString("yyyy-MM-dd")</td>
+                <td><span class="badge badge-@order.StatusName">@order.StatusName</span></td>
+                <td>@order.OrderTotal.ToString("C")</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+
+    @if (!Model.Orders.Any())
+    {
+        <p class="muted">No orders yet.</p>
+    }
+}
