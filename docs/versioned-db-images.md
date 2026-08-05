@@ -3,6 +3,12 @@
 This is the idea from the original design discussion, implemented: **every
 database image is a pull-able snapshot of the schema at a specific commit.**
 
+This repo actually has two real, buildable versions in its git history —
+`v1.0.0` (the baseline `Customer`/`Order`/`OrderLineItem`/`Status` schema)
+and `v1.1.0` (adds an `Order.Priority` column). Every command below uses
+those two tags and is copy-pasteable as-is; see [Trying it with this
+repo's own history](#trying-it-with-this-repos-own-history) to build them.
+
 ## How it works here
 
 `docker/Dockerfile.database` is a two-stage build:
@@ -84,6 +90,36 @@ commit, talking to a database with that commit's schema, running alongside
 your current stack on `http://localhost:8080`. Reproducing "what did this
 look like before we made that change" becomes a single command instead of a
 checkout-and-rebuild.
+
+## Trying it with this repo's own history
+
+The two tags used in every example above are real:
+
+```bash
+git checkout v1.0.0 && scripts/build-db-image.sh v1.0.0
+git checkout v1.1.0 && scripts/build-db-image.sh v1.1.0
+git checkout claude/docker-database-projects-demo-nd0k6i   # back to the branch tip
+
+scripts/compare-schema.sh v1.0.0 v1.1.0 Order
+```
+
+Expect:
+
+```
+=== [Order] columns: v1.0.0 vs v1.1.0 ===
+--- v1.0.0
++++ v1.1.0
+@@ -5,0 +6 @@
++Priority tinyint NOT NULL
+```
+
+That diff is real output from running this exact script against these exact
+two images — `v1.1.0` added `Order.Priority`
+(`src/MyApplication.Database/Tables/Order.sql`), nothing else changed. It
+was also verified as a genuine in-place upgrade, not a recreate: deploying
+`myapp-db:v1.1.0` on top of a data volume that already had `myapp-db:v1.0.0`
+running against it produces `Altering Table [dbo].[Order]...` in the deploy
+log, and every row inserted under `v1.0.0` is still there afterward.
 
 ## What this repo demonstrates vs. what a real system would add
 
