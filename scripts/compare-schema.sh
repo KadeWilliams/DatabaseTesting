@@ -32,13 +32,20 @@ trap cleanup EXIT
 
 wait_ready() {
     local container="$1"
+    # Poll the target database itself (not just the SQL Server engine) —
+    # sqlpackage creates the database in the first second of a publish, long
+    # before the schema and post-deployment seed finish, so we wait for the
+    # seed data specifically to know the whole deploy is actually done.
     for _ in $(seq 1 60); do
-        if docker exec "$container" /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$PASSWORD" -C -N -Q "SELECT 1" > /dev/null 2>&1; then
+        local count
+        count=$(docker exec "$container" /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$PASSWORD" -C -N -d MyApplicationDb -h -1 -W -Q "SET NOCOUNT ON; SELECT COUNT(*) FROM dbo.Status" 2>/dev/null | tr -d '[:space:]') || true
+        if [ "${count:-0}" -gt 0 ] 2>/dev/null; then
             return 0
         fi
         sleep 2
     done
     echo "Timed out waiting for $container to become ready." >&2
+    docker logs --tail 40 "$container" >&2
     exit 1
 }
 
@@ -56,8 +63,6 @@ docker run -d --name "$CONTAINER_B" -e ACCEPT_EULA=Y -e MSSQL_SA_PASSWORD="$PASS
 
 wait_ready "$CONTAINER_A"
 wait_ready "$CONTAINER_B"
-# Give sqlpackage's post-startup deploy a moment to finish after the port opens.
-sleep 5
 
 dump_columns "$CONTAINER_A" > /tmp/schema-${TAG_A//\//_}.txt
 dump_columns "$CONTAINER_B" > /tmp/schema-${TAG_B//\//_}.txt
