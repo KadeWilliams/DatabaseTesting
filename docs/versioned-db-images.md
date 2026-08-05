@@ -93,7 +93,11 @@ checkout-and-rebuild.
 
 ## Trying it with this repo's own history
 
-The two tags used in every example above are real:
+The two versions used in every example above are real, checked-in commits on
+this repo, each with a `git checkout`-able ref (`v1.0.0`, `v1.1.0` — pushed
+as branches rather than annotated tags, since the GitHub App installation
+used to push this repo can create branches but not tag objects; `git
+checkout` works identically either way):
 
 ```bash
 git checkout v1.0.0 && scripts/build-db-image.sh v1.0.0
