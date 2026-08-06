@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[usp_Customer_Insert]
+CREATE PROCEDURE [dbo].[usp_InsertCustomer]
     @FirstName NVARCHAR(100),
     @LastName  NVARCHAR(100)
 AS
