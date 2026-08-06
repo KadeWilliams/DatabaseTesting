@@ -59,7 +59,18 @@ jobs:
       - name: Install sqlpackage
         run: dotnet tool install --global microsoft.sqlpackage
 
+      - name: Check whether the base branch has a database project yet
+        id: base-check
+        run: |
+          if [ -f "base-branch/src/MyApplication.Database/MyApplication.Database.sqlproj" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "No .sqlproj on the base branch — this PR is introducing it. Comparing against an empty database instead of failing the build."
+          fi
+
       - name: Build base branch's .dacpac (the comparison baseline)
+        if: steps.base-check.outputs.exists == 'true'
         run: |
           dotnet build base-branch/src/MyApplication.Database/MyApplication.Database.sqlproj \
             -c Release -o base-out
@@ -70,6 +81,7 @@ jobs:
             -c Release -o pr-out
 
       - name: Publish base schema to the service container
+        if: steps.base-check.outputs.exists == 'true'
         env:
           SA_PASSWORD: SchemaDiffPreview!CI
         run: |
