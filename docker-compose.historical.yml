@@ -19,6 +19,14 @@ services:
     ports:
       - "1434:1433"
     healthcheck:
+      # Deliberately still connectivity-only ("SELECT 1"), not the
+      # /tmp/schema-deployed marker docker-compose.yml's db service checks —
+      # this file has to work against ANY historical image tag, including
+      # ones built before that marker existed in db-entrypoint.sh. It has
+      # the same startup race the marker fixes (web can start before the
+      # schema deploy finishes on a cold volume); acceptable here since
+      # this file is for inspecting a specific version, not the primary
+      # day-to-day stack.
       test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -N -Q 'SELECT 1'"]
       interval: 10s
       timeout: 5s

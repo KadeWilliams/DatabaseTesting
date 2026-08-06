@@ -9,6 +9,7 @@ obj/
 ## IDE
 .vs/
 .vscode/
+.idea/
 *.suo
 
 ## OS

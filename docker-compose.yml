@@ -15,10 +15,15 @@ services:
     volumes:
       - mssql-data:/var/opt/mssql
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -N -Q 'SELECT 1' || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -N -Q 'SELECT 1'"]
-      interval: 10s
+      # Checks for the marker db-entrypoint.sh touches after sqlpackage
+      # publish finishes — not just that SQL Server accepts connections.
+      # SQL Server is reachable well before the schema deploy completes, so
+      # a connectivity-only check lets `web` start before the tables and
+      # stored procedures it depends on actually exist.
+      test: ["CMD-SHELL", "test -f /tmp/schema-deployed"]
+      interval: 5s
       timeout: 5s
-      retries: 12
+      retries: 24
       start_period: 40s
 
   web:

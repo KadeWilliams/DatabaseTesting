@@ -11,6 +11,9 @@ if [ ! -x "$SQLCMD" ]; then
     SQLCMD=/opt/mssql-tools/bin/sqlcmd
 fi
 
+READY_MARKER=/tmp/schema-deployed
+rm -f "$READY_MARKER"
+
 /opt/mssql/bin/sqlservr &
 SQLSERVR_PID=$!
 
@@ -40,5 +43,13 @@ sqlpackage \
     /TargetTrustServerCertificate:true
 
 echo "Schema deployed. Database ready."
+
+# docker-compose's healthcheck polls for this file rather than just
+# re-running "SELECT 1" — SQL Server accepts connections well before the
+# sqlpackage publish above finishes (measured ~7s vs ~20s on a cold start),
+# so a connectivity-only healthcheck can report "healthy" while the schema
+# and seed data are still being deployed, letting the web container start
+# and hit stored procedures that don't exist yet.
+touch "$READY_MARKER"
 
 wait "$SQLSERVR_PID"
