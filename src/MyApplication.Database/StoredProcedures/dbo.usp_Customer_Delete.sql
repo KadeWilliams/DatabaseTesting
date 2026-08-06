@@ -4,6 +4,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
+    -- comment to test
     DELETE FROM [dbo].[Customer]
     WHERE [CustomerId] = @CustomerId;
 END
