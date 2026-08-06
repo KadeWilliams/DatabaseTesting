@@ -1,7 +1,7 @@
 CREATE PROCEDURE [dbo].[usp_InsertCustomer]
-    @FirstName NVARCHAR(100),
-    @LastName  NVARCHAR(100),
-    @CreatedBy NVARCHAR(100)
+    @FirstName NVARCHAR(50),
+    @LastName  NVARCHAR(50),
+    @CreatedBy NVARCHAR(50)
 AS
 BEGIN
     SET NOCOUNT ON;
