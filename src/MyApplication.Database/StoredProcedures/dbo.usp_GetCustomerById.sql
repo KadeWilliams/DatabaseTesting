@@ -5,7 +5,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
     
-    SELECT * 
+    SELECT CustomerId, FirstName, LastName
     FROM dbo.Customer
     WHERE CustomerId = @CustomerId;
 END;
