@@ -1,5 +1,5 @@
 CREATE TABLE dbo.Customer (
-    CustomerId INT IDENTITY(1, 1) PRIMARY KEY,
+    CustomerId INT IDENTITY(1, 1),
     FirstName NVARCHAR(50) NOT NULL,
     LastName NVARCHAR(50) NOT NULL,
     CreatedAt DATETIME2(0) DEFAULT SYSDATETIME(),
