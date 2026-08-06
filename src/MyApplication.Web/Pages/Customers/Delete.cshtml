@@ -1,0 +1,22 @@
+@page "{id:int}"
+@model MyApplication.Web.Pages.Customers.DeleteModel
+@{
+    ViewData["Title"] = "Delete Customer";
+}
+
+<h1>Delete Customer</h1>
+
+@if (Model.Customer is null)
+{
+    <p class="muted">Customer not found.</p>
+}
+else
+{
+    <p>Are you sure you want to delete <strong>@Model.Customer.FirstName @Model.Customer.LastName</strong> (@Model.Customer.Email)?</p>
+
+    <form method="post">
+        <input type="hidden" name="id" value="@Model.Customer.CustomerId" />
+        <button type="submit" class="btn btn-danger">Delete</button>
+        <a class="btn btn-secondary" href="/Customers">Cancel</a>
+    </form>
+}

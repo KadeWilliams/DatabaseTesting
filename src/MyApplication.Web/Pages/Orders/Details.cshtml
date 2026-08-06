@@ -1,0 +1,64 @@
+@page "{id:int}"
+@model MyApplication.Web.Pages.Orders.DetailsModel
+@{
+    ViewData["Title"] = "Order Details";
+}
+
+@if (Model.Order is null)
+{
+    <p class="muted">Order not found.</p>
+}
+else
+{
+    <div class="page-header">
+        <h1>Order #@Model.Order.OrderId</h1>
+        <span class="badge badge-@Model.Order.StatusName">@Model.Order.StatusName</span>
+    </div>
+
+    <p class="muted">
+        Customer: <a href="/Customers/Details/@Model.Order.CustomerId">@Model.Order.FirstName @Model.Order.LastName</a>
+        &middot; Placed @Model.Order.OrderDate.ToString("yyyy-MM-dd")
+    </p>
+    @if (!string.IsNullOrWhiteSpace(Model.Order.Notes))
+    {
+        <p>@Model.Order.Notes</p>
+    }
+
+    <h2>Line Items</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Qty</th>
+                <th>Unit Price</th>
+                <th>Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var item in Model.Order.LineItems)
+        {
+            <tr>
+                <td>@item.ProductName</td>
+                <td>@item.Quantity</td>
+                <td>@item.UnitPrice.ToString("C")</td>
+                <td>@((item.Quantity * item.UnitPrice).ToString("C"))</td>
+            </tr>
+        }
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="3"><strong>Total</strong></td>
+                <td><strong>@Model.Order.OrderTotal.ToString("C")</strong></td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <h2>Update Status</h2>
+    <form method="post" class="line-item-row" style="max-width: 420px;">
+        <input type="hidden" name="id" value="@Model.Order.OrderId" />
+        <div class="field">
+            <select name="statusId" asp-items="Model.StatusOptions"></select>
+        </div>
+        <button type="submit" class="btn">Update</button>
+    </form>
+}

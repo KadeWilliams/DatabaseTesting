@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>myapplication-web-demo</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MyApplication.Core\MyApplication.Core.csproj" />
+    <ProjectReference Include="..\MyApplication.Infrastructure\MyApplication.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

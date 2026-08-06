@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - MyApplication Demo</title>
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body>
+    <header class="site-header">
+        <div class="container">
+            <a class="brand" href="/">MyApplication</a>
+            <nav>
+                <a href="/Customers">Customers</a>
+                <a href="/Orders">Orders</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        @if (TempData["Message"] is string message)
+        {
+            <div class="alert alert-success">@message</div>
+        }
+        @if (TempData["Error"] is string error)
+        {
+            <div class="alert alert-error">@error</div>
+        }
+        @RenderBody()
+    </main>
+
+    <footer class="container">
+        <p>Docker + SQL Database Project demo &mdash; schema deployed from a versioned .dacpac.</p>
+    </footer>
+</body>
+</html>

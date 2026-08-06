@@ -1,0 +1,44 @@
+@page
+@model MyApplication.Web.Pages.Customers.IndexModel
+@{
+    ViewData["Title"] = "Customers";
+}
+
+<div class="page-header">
+    <h1>Customers</h1>
+    <a class="btn" href="/Customers/Create">+ New Customer</a>
+</div>
+
+<form method="get">
+    <input type="text" name="search" placeholder="Search by last name..." value="@Model.Search" />
+</form>
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Customer Since</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var customer in Model.Customers)
+    {
+        <tr>
+            <td><a href="/Customers/Details/@customer.CustomerId">@customer.FirstName @customer.LastName</a></td>
+            <td>@customer.Email</td>
+            <td>@customer.CreatedAtUtc.ToString("yyyy-MM-dd")</td>
+            <td class="actions">
+                <a class="btn btn-secondary" href="/Customers/Edit/@customer.CustomerId">Edit</a>
+                <a class="btn btn-danger" href="/Customers/Delete/@customer.CustomerId">Delete</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
+
+@if (!Model.Customers.Any())
+{
+    <p class="muted">No customers found.</p>
+}

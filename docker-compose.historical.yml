@@ -1,0 +1,45 @@
+# Pulls up a specific historical pairing of the database and web app,
+# pinned by tag, on ports that don't collide with the main
+# docker-compose.yml stack — so you can run "now" and "back then" at the
+# same time and compare them.
+#
+# Usage:
+#   DB_TAG=v1.0.0 WEB_TAG=v1.0.0 docker compose -f docker-compose.historical.yml up
+#
+# Tags come from scripts/build-db-image.sh / scripts/build-web-image.sh —
+# either the git short-sha they print, or a friendly version you passed in.
+
+services:
+  db-historical:
+    image: myapp-db:${DB_TAG:?set DB_TAG to the image tag you want to inspect}
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "YourStrong@Passw0rd"
+      DATABASE_NAME: "MyApplicationDb"
+    ports:
+      - "1434:1433"
+    healthcheck:
+      # Deliberately still connectivity-only ("SELECT 1"), not the
+      # /tmp/schema-deployed marker docker-compose.yml's db service checks —
+      # this file has to work against ANY historical image tag, including
+      # ones built before that marker existed in db-entrypoint.sh. It has
+      # the same startup race the marker fixes (web can start before the
+      # schema deploy finishes on a cold volume); acceptable here since
+      # this file is for inspecting a specific version, not the primary
+      # day-to-day stack.
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -N -Q 'SELECT 1'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  web-historical:
+    image: myapp-web:${WEB_TAG:?set WEB_TAG to the image tag you want to inspect}
+    environment:
+      ConnectionStrings__Default: "Server=db-historical,1433;Database=MyApplicationDb;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True"
+      ASPNETCORE_ENVIRONMENT: "Production"
+    ports:
+      - "8081:8080"
+    depends_on:
+      db-historical:
+        condition: service_healthy

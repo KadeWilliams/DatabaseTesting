@@ -1,0 +1,32 @@
+# syntax=docker/dockerfile:1
+
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+COPY src/MyApplication.Core/MyApplication.Core.csproj MyApplication.Core/
+COPY src/MyApplication.Infrastructure/MyApplication.Infrastructure.csproj MyApplication.Infrastructure/
+COPY src/MyApplication.Web/MyApplication.Web.csproj MyApplication.Web/
+RUN dotnet restore MyApplication.Web/MyApplication.Web.csproj
+
+COPY src/MyApplication.Core/ MyApplication.Core/
+COPY src/MyApplication.Infrastructure/ MyApplication.Infrastructure/
+COPY src/MyApplication.Web/ MyApplication.Web/
+# Deliberately not --no-restore: on some Docker Desktop backends, BuildKit's
+# layer snapshotting can drop files from the NuGet package cache between the
+# restore layer above and this one (surfaces as NETSDK1064 "package was not
+# found" for an already-restored package). Letting publish re-verify/restore
+# costs a few seconds when the cache is intact, but doesn't hard-fail when
+# it isn't.
+RUN dotnet publish MyApplication.Web/MyApplication.Web.csproj -c Release -o /app
+
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
+WORKDIR /app
+COPY --from=build /app .
+
+ARG APP_VERSION=dev
+LABEL org.opencontainers.image.title="MyApplication web" \
+      myapplication.app-version="${APP_VERSION}"
+
+ENV ASPNETCORE_URLS=http://+:8080
+EXPOSE 8080
+ENTRYPOINT ["dotnet", "MyApplication.Web.dll"]
