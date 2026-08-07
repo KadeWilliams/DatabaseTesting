@@ -26,9 +26,17 @@ public static class Program
         System.Console.WriteLine($"Database connection successful. Test query returned: {result}");
 
         var customerRepository = scope.ServiceProvider.GetRequiredService<ICustomerRepository>();
-        customerRepository.UpdateCustomer(customerId: 1, firstName: "Kade", lastName: "Williams");
 
         var customer = customerRepository.GetCustomerById(1);
+        if (customer is null)
+        {
+            var customerId = customerRepository.InsertCustomer(firstName: "Seed", lastName: "Customer", createdBy: "console-seed");
+            System.Console.WriteLine($"No customer found, seeded customer {customerId}.");
+        }
+
+        customerRepository.UpdateCustomer(customerId: 1, firstName: "Kade", lastName: "Williams");
+
+        customer = customerRepository.GetCustomerById(1);
         System.Console.WriteLine($"Updated customer: {customer?.FirstName} {customer?.LastName}");
     }
 }

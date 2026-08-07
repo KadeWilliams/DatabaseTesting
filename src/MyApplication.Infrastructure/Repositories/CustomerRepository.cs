@@ -34,4 +34,14 @@ public sealed class CustomerRepository : ICustomerRepository
             new { CustomerId = customerId, FirstName = firstName, LastName = lastName },
             commandType: CommandType.StoredProcedure);
     }
+
+    public int InsertCustomer(string firstName, string lastName, string createdBy)
+    {
+        using var connection = _connectionFactory.Create();
+        connection.Open();
+        return connection.QuerySingle<int>(
+            "dbo.usp_InsertCustomer",
+            new { FirstName = firstName, LastName = lastName, CreatedBy = createdBy },
+            commandType: CommandType.StoredProcedure);
+    }
 }
