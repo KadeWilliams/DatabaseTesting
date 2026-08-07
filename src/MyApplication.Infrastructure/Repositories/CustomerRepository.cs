@@ -1,4 +1,7 @@
+using System.Data;
 using Dapper;
+using MyApplication.Core.Interfaces;
+using MyApplication.Core.Models;
 using MyApplication.Infrastructure.Database;
 
 namespace MyApplication.Infrastructure.Repositories;
@@ -12,19 +15,23 @@ public sealed class CustomerRepository : ICustomerRepository
         _connectionFactory = connectionFactory;
     }
 
-    public void UpdateCustomer(int customerId, string FirstName, string LastName)
+    public Customer? GetCustomerById(int customerId)
     {
         using var connection = _connectionFactory.Create();
         connection.Open();
-        connection.Execute("UPDATE dbo.Customer SET FirstName = @FirstName, LastName = @LastName WHERE CustomerId = @CustomerId",
-            new { CustomerId = customerId, FirstName = FirstName, LastName = LastName });
+        return connection.QuerySingleOrDefault<Customer>(
+            "dbo.usp_GetCustomerById",
+            new { CustomerId = customerId },
+            commandType: CommandType.StoredProcedure);
     }
-    
-    public dynamic GetCustomerById(int customerId)
+
+    public void UpdateCustomer(int customerId, string firstName, string lastName)
     {
         using var connection = _connectionFactory.Create();
         connection.Open();
-        return connection.QueryFirstOrDefault<dynamic>("SELECT * FROM dbo.Customer WHERE CustomerId = @CustomerId",
-            new { CustomerId = customerId});
+        connection.Execute(
+            "dbo.usp_Customer_Update",
+            new { CustomerId = customerId, FirstName = firstName, LastName = lastName },
+            commandType: CommandType.StoredProcedure);
     }
 }

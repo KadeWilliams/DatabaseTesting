@@ -1,4 +1,5 @@
 using Dapper;
+using MyApplication.Core.Interfaces;
 using MyApplication.Infrastructure.Database;
 
 namespace MyApplication.Infrastructure.Repositories;

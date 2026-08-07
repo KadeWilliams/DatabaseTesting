@@ -1,4 +1,4 @@
-namespace MyApplication.Infrastructure.Repositories;
+namespace MyApplication.Core.Interfaces;
 
 public interface IHealthCheckRepository
 {

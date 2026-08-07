@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MyApplication.Core.Interfaces;
 using MyApplication.Infrastructure.Database;
 using MyApplication.Infrastructure.Repositories;
 
