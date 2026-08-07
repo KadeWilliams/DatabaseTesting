@@ -1,0 +1,24 @@
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+COPY src/MyApplication.Infrastructure/MyApplication.Infrastructure.csproj ./MyApplication.Infrastructure/
+COPY src/MyApplication.Core/MyApplication.Core.csproj ./MyApplication.Core/
+COPY src/MyApplication.Console/MyApplication.Console.csproj ./MyApplication.Console/
+RUN dotnet restore ./MyApplication.Console/MyApplication.Console.csproj
+
+COPY src/MyApplication.Infrastructure/ ./MyApplication.Infrastructure/
+COPY src/MyApplication.Core/ ./MyApplication.Core/
+COPY src/MyApplication.Console/ ./MyApplication.Console/
+RUN dotnet build ./MyApplication.Console/MyApplication.Console.csproj -c Release -o /build
+
+RUN dotnet publish ./MyApplication.Console/MyApplication.Console.csproj -c Release -o /app 
+
+FROM mcr.microsoft.com/dotnet/runtime:8.0
+WORKDIR /app
+COPY --from=build /app .
+
+ARG APP_VERSION=dev
+LABEL org.opencontainers.image.title="MyApplication console" \
+      myapplication.app-version="${APP_VERSION}"
+      
+ENTRYPOINT ["dotnet", "MyApplication.Console.dll"]
