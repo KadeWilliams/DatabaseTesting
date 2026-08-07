@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 #
-docker build -f docker/Dockerfile -t test .
+# WHAT TO RUN IN TERMINAL: docker build -f docker/Dockerfile -t test .
 # Builds the schema-as-an-image: compiles the SQL Database Project into a
 # .dacpac, then bakes that dacpac into a SQL Server image alongside SqlPackage
 # and a startup script that deploys it. The resulting image IS a specific
