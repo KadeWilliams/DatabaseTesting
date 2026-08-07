@@ -1,27 +1,9 @@
-﻿using System.Data;
-using Dapper;
-using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using MyApplication.Infrastructure.DependencyInjection;
+using MyApplication.Infrastructure.Repositories;
 
 namespace MyApplication.Console;
-
-public interface IConnectionFactory
-{
-    IDbConnection Create();
-}
-
-public sealed class SqlConnectionFactory : IConnectionFactory
-{
-    private readonly string _connectionString;
-
-    public SqlConnectionFactory(IConfiguration configuration)
-    {
-        _connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
-    }
-
-    public IDbConnection Create() => new SqlConnection(_connectionString);
-}
 
 public static class Program
 {
@@ -33,12 +15,20 @@ public static class Program
             .AddEnvironmentVariables()
             .Build();
 
-        IConnectionFactory connectionFactory = new SqlConnectionFactory(configuration);
+        var services = new ServiceCollection();
+        services.AddInfrastructure(configuration);
 
-        using var connection = connectionFactory.Create();
-        connection.Open();
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
 
-        var result = connection.QuerySingle<int>("SELECT 1");
+        var healthCheckRepository = scope.ServiceProvider.GetRequiredService<IHealthCheckRepository>();
+        var result = healthCheckRepository.CheckConnection();
         System.Console.WriteLine($"Database connection successful. Test query returned: {result}");
+        
+        var customerRepository = scope.ServiceProvider.GetRequiredService<ICustomerRepository>();
+        customerRepository.UpdateCustomer(customerId: 1, FirstName: "Kade", LastName: "Williams");
+        
+        var customer = customerRepository.GetCustomerById(1);
+        System.Console.WriteLine($"Updated CustomerId: {customer}");
     }
 }
