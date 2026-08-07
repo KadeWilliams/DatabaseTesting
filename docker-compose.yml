@@ -1,0 +1,47 @@
+# docker run 
+services:
+  db:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.database
+      args:
+        SCHEMA_VERSION: ${SCHEMA_VERSION:-dev}
+    image: myapp-db:${SCHEMA_VERSION:-dev}
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "YourStrong@Passw0rd"
+      DATABASE_NAME: "MyApplicationDb"
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+    healthcheck:
+      # Checks for the marker db-entrypoint.sh touches after sqlpackage
+      # publish finishes — not just that SQL Server accepts connections.
+      # SQL Server is reachable well before the schema deploy completes, so
+      # a connectivity-only check lets `web` start before the tables and
+      # stored procedures it depends on actually exist.
+      test: ["CMD-SHELL", "test -f /tmp/schema-deployed"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 40s
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+      args:
+        APP_VERSION: ${APP_VERSION:-dev}
+    image: myapp-web:${APP_VERSION:-dev}
+    environment:
+      ConnectionStrings__Default: "Server=db,1433;Database=MyApplicationDb;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True"
+      ASPNETCORE_ENVIRONMENT: "Production"
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  mssql-data:
