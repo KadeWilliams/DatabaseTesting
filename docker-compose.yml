@@ -1,0 +1,36 @@
+services: 
+  db: 
+    build: 
+      context: .
+      dockerfile: docker/Dockerfile.database
+      args: 
+        SCHEMA_VERSION: myapp-db:${SCHEMA_VERSION:-dev}
+    image: myapp-db:${SCHEMA_VERSION:-dev}
+    environment: 
+      ACCEPT_EULA: Y
+      DATABASE_NAME: MyApplicationDb
+      MSSQL_SA_PASSWORD: YourStrong@Passw0rd
+    ports: 
+      - "1433:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/schema-deployed"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 40s
+  console:
+    build: 
+      context: .
+      dockerfile: docker/Dockerfile.console
+      args:
+        APP_VERSION: myapp-console:${APP_VERSION:-dev}
+    image: myapp-console:${APP_VERSION:-dev}
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=db,1433;Database=MyApplicationDb;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;"
+    depends_on:
+      db:
+        condition: service_healthy
+volumes: 
+  mssql-data:
