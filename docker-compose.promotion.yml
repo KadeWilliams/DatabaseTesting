@@ -1,0 +1,48 @@
+# Deploys ONE pre-built, versioned schema image to two independent
+# environments. Neither service below has a `build:` section — that's
+# the point. Promotion means pointing the exact same artifact (built once
+# by scripts/build-db-image.sh) at a different target; it never means
+# rebuilding from source per environment.
+#
+# Usage:
+#   scripts/build-db-image.sh v1.0.0
+#   SCHEMA_VERSION=v1.0.0 docker compose -f docker-compose.promotion.yml up -d
+#
+# dev is reachable at localhost,1434 and staging at localhost,1435 — two
+# separate SQL Server instances, two separate volumes, same schema image.
+services:
+  db-dev:
+    image: myapp-db:${SCHEMA_VERSION:?set SCHEMA_VERSION to a tag built by scripts/build-db-image.sh}
+    environment:
+      ACCEPT_EULA: Y
+      DATABASE_NAME: MyApplicationDb
+      MSSQL_SA_PASSWORD: YourStrong@Passw0rd
+    ports:
+      - "1434:1433"
+    volumes:
+      - mssql-data-dev:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/schema-deployed"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 40s
+  db-staging:
+    image: myapp-db:${SCHEMA_VERSION:?set SCHEMA_VERSION to a tag built by scripts/build-db-image.sh}
+    environment:
+      ACCEPT_EULA: Y
+      DATABASE_NAME: MyApplicationDb
+      MSSQL_SA_PASSWORD: YourStrong@Passw0rd
+    ports:
+      - "1435:1433"
+    volumes:
+      - mssql-data-staging:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/schema-deployed"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 40s
+volumes:
+  mssql-data-dev:
+  mssql-data-staging:
